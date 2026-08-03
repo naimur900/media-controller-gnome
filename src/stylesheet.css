@@ -72,9 +72,10 @@
 
 /* ---------- Player switcher ---------- */
 
-/* A short strip of app icons on the card's top line, left of the gear, shown
- * only while more than one player is running. The tray around them is what
- * reads as a switch rather than as a handful of loose buttons. */
+/* A column of app icons beside the gear, shown only while more than one player
+ * is running. The tray around them is what reads as a switch rather than as a
+ * handful of loose buttons; the fully round ends suit a stack of circular icon
+ * buttons the same way they suited a row of them. */
 .mc-player-tabs {
   spacing: 2px;
   padding: 2px;
@@ -149,7 +150,7 @@
   spacing: 4px;
 }
 
-/* The player switcher and the gear, side by side. */
+/* The player switcher column and the gear, side by side. */
 .mc-card-actions-top {
   spacing: 4px;
 }

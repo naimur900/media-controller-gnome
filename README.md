@@ -45,10 +45,11 @@ Rhythmbox, mpv, and so on.
   left edge and loop on its right, aligned with the controls.
 - **Player switching** when more than one player is running: a strip of app icons
   appears in the card's top corner, left of the settings button, and clicking one
-  puts that player in the panel. The choice sticks until that player quits, so
-  picking VLC is not undone by Spotify starting a new track. Three icons are shown
-  at most, always including the player the card is following. With a single player
-  the strip stays hidden and the card looks exactly as it always did.
+  puts that player in the panel. The choice sticks through the noise of a track
+  changing, and is released as soon as you press play somewhere else — that player
+  takes over. Three icons are shown at most: the player currently on screen, plus
+  the most recently opened. With a single player the strip stays hidden and the
+  card looks exactly as it always did.
 - **One player at a time**: starting playback in one player pauses whichever
   other player was playing, so hitting play in VLC no longer leaves Spotify
   running underneath it. Players already playing when the extension starts are

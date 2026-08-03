@@ -523,24 +523,25 @@ export const MprisManager = GObject.registerClass({
     }
 
     /**
-     * The players the UI can actually control and switch between, in a stable
-     * order: the map is keyed by arrival, so a player that quits and comes back
-     * would otherwise move the switcher's tabs around under the pointer.
+     * The players the UI can actually control and switch between, oldest first:
+     * the map is keyed by arrival, so this is the order they were opened in,
+     * and a switcher with room for only a few of them can drop the ones that
+     * have been sitting around longest. Players already running at startup are
+     * ordered by what the bus reports, which is the closest thing to an opening
+     * order available after the fact.
      */
     get readyPlayers() {
-        return this.players
-            .filter(player => player.ready)
-            .sort((a, b) => a.busName.localeCompare(b.busName));
+        return this.players.filter(player => player.ready);
     }
 
     /**
      * Show this player, whatever else is playing.
      *
-     * The choice sticks: _selectActive() honours it until that player leaves
-     * the bus, so picking VLC while Spotify is playing is not undone by
-     * Spotify's next metadata update. Picking the player that is already
-     * active still pins it, which is how the user re-takes control after the
-     * automatic selection moved on.
+     * The choice sticks against the noise — a player's metadata updates several
+     * times a second and none of that should move the card off what the user
+     * asked for — but not against intent: the moment any other player starts
+     * playing, _noteStatus() drops the pin and that player takes over. It is
+     * also dropped when the pinned player leaves the bus.
      *
      * @param {string} busName the player's MPRIS bus name
      */
@@ -646,9 +647,20 @@ export const MprisManager = GObject.registerClass({
 
         this._statuses.set(player.busName, status);
 
+        if (status !== 'Playing')
+            return;
+
+        /* Pressing play somewhere is the clearest statement there is about
+         * which player matters now, so it releases an earlier pick — otherwise
+         * the card would sit on a player the user chose minutes ago while the
+         * one they just started plays unseen, with no way back if the switcher
+         * has no room to show it. */
+        if (this._pinned && this._pinned !== player.busName)
+            this._pinned = null;
+
         /* `undefined` is a player we are seeing for the first time and were not
          * around to watch start; leave it, and everyone else, alone. */
-        if (previous !== undefined && status === 'Playing')
+        if (previous !== undefined)
             this._pauseOthers(player);
     }
 

@@ -149,15 +149,16 @@ export const MediaCard = GObject.registerClass({
         this.connect('destroy', () => this._onDestroy());
     }
 
-    /* One tab per running player, sitting left of the gear in the header's
-     * action column. Hidden — and left empty — whenever there is nothing to
-     * switch between, which is the usual case, so the card pays nothing for the
-     * feature until a second player shows up. `_buildHeader` parents it. */
+    /* One tab per running player, stacked into a column left of the gear in the
+     * header's action column. Hidden — and left empty — whenever there is
+     * nothing to switch between, which is the usual case, so the card pays
+     * nothing for the feature until a second player shows up. `_buildHeader`
+     * parents it. */
     _buildSwitcher() {
         this._switcherBox = new St.BoxLayout({
             style_class: 'mc-player-tabs',
-            orientation: Clutter.Orientation.HORIZONTAL,
-            y_align: Clutter.ActorAlign.CENTER,
+            orientation: Clutter.Orientation.VERTICAL,
+            y_align: Clutter.ActorAlign.START,
             visible: false,
         });
     }
@@ -222,10 +223,14 @@ export const MediaCard = GObject.registerClass({
 
     /**
      * At most MAX_VISIBLE_TABS icons; any further players are simply not drawn,
-     * which keeps the row beside the gear from growing without bound. The
-     * player on screen is always among them — the row reports which player the
-     * card is following, so leaving that one out is the one thing it must never
-     * do.
+     * which keeps the row beside the gear from growing without bound.
+     *
+     * Which ones survive: the player on screen always — the row reports which
+     * player the card is following, so leaving that one out is the one thing it
+     * must never do — and then the most recently opened, since a player that
+     * has been sitting in a background tab since this morning is the one you
+     * are least likely to reach for. `players` arrives oldest first and the row
+     * keeps that order, so the icons do not shuffle around between syncs.
      *
      * @param {object[]} players every player the switcher was given
      * @returns {object[]} the ones to draw an icon for
@@ -234,16 +239,17 @@ export const MediaCard = GObject.registerClass({
         if (players.length <= MAX_VISIBLE_TABS)
             return players;
 
-        const visible = players.slice(0, MAX_VISIBLE_TABS);
-        if (visible.some(player => player.busName === this._activeBusName))
-            return visible;
+        const recent = players.slice(-MAX_VISIBLE_TABS);
+        if (recent.some(player => player.busName === this._activeBusName))
+            return recent;
 
-        /* The active player is further down the list: it takes the last slot,
-         * so the ones before it keep their places. */
         const active = players.find(player => player.busName === this._activeBusName);
-        if (active)
-            visible[MAX_VISIBLE_TABS - 1] = active;
-        return visible;
+        if (!active)
+            return recent;
+
+        /* The player on screen is older than all of these, so it goes in front
+         * and the oldest of them makes room. */
+        return [active, ...recent.slice(1)];
     }
 
     _rebuildTabs(players, key) {
@@ -258,7 +264,7 @@ export const MediaCard = GObject.registerClass({
             const button = new St.Button({
                 style_class: 'mc-player-tab',
                 can_focus: true,
-                y_align: Clutter.ActorAlign.CENTER,
+                x_align: Clutter.ActorAlign.CENTER,
                 child: icon,
             });
 
@@ -338,17 +344,20 @@ export const MediaCard = GObject.registerClass({
             x_align: Clutter.ActorAlign.END,
         });
 
+        /* Pinned to the top of the row rather than centred in it: the tab
+         * column beside it is as tall as there are players, and a centred gear
+         * would slide down the card as players come and go. */
         this._prefsButton = new St.Button({
             style_class: 'mc-app-button',
             can_focus: true,
-            y_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.START,
             child: new St.Icon({icon_name: 'emblem-system-symbolic', icon_size: 16}),
         });
         this._prefsButton.connect('clicked', () => this.emit('open-preferences'));
 
-        /* The top line of the column: the player tabs, then the gear pinned to
-         * the corner. With one player the tabs are hidden and this is the gear
-         * on its own, exactly as before. */
+        /* The top of the column: the stack of player tabs, then the gear in the
+         * corner. With one player the tabs are hidden and this is the gear on
+         * its own, exactly as before. */
         const topRow = new St.BoxLayout({
             style_class: 'mc-card-actions-top',
             orientation: Clutter.Orientation.HORIZONTAL,
