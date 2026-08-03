@@ -44,11 +44,11 @@ Rhythmbox, mpv, and so on.
   large transport controls including skip buttons — with shuffle on the card's
   left edge and loop on its right, aligned with the controls.
 - **Player switching** when more than one player is running: a strip of app icons
-  appears on its own row at the top of the card, and clicking one puts that player
-  in the panel. The choice sticks until that player quits, so picking VLC is not
-  undone by Spotify starting a new track. Three icons are shown at most; any beyond
-  that collapse into a `+3` button that reveals the rest. With a single player the
-  strip stays hidden and the card looks exactly as it always did.
+  appears in the card's top corner, left of the settings button, and clicking one
+  puts that player in the panel. The choice sticks until that player quits, so
+  picking VLC is not undone by Spotify starting a new track. Three icons are shown
+  at most, always including the player the card is following. With a single player
+  the strip stays hidden and the card looks exactly as it always did.
 - **One player at a time**: starting playback in one player pauses whichever
   other player was playing, so hitting play in VLC no longer leaves Spotify
   running underneath it. Players already playing when the extension starts are

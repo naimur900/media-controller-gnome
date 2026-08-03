@@ -28,10 +28,10 @@ const POSITION_POLL_SECONDS = 1;
  * still does the real work, this only stops the pathological case. */
 const MAX_TITLE_CHARS = 120;
 
-/* How many player icons the switcher draws before collapsing the rest into a
- * "+N" button. Three keeps the row a glanceable strip: a session with more
- * players than that is one where the row would otherwise become the loudest
- * thing on the card. */
+/* How many player icons the switcher draws. Three keeps the row narrow enough
+ * to share the card's top line with the gear; a session with more players than
+ * that is one where the row would otherwise become the loudest thing on the
+ * card. */
 const MAX_VISIBLE_TABS = 3;
 
 /* Keyed by the `card-art-size` enum nick. `icon` sizes the fallback player icon
@@ -126,7 +126,6 @@ export const MediaCard = GObject.registerClass({
         this._tabs = new Map();
         this._tabsKey = null;
         this._activeBusName = null;
-        this._expanded = false;
 
         this._buildSwitcher();
         this._buildHeader();
@@ -150,20 +149,17 @@ export const MediaCard = GObject.registerClass({
         this.connect('destroy', () => this._onDestroy());
     }
 
-    /* One tab per running player, on a row of its own along the top of the
-     * card. Nothing else shares that row: the header below it then spans the
-     * full width, which is what keeps a long title out of a narrow column.
-     * Hidden — and left empty — whenever there is nothing to switch between,
-     * which is the usual case, so the card pays nothing for the feature until a
-     * second player shows up. */
+    /* One tab per running player, sitting left of the gear in the header's
+     * action column. Hidden — and left empty — whenever there is nothing to
+     * switch between, which is the usual case, so the card pays nothing for the
+     * feature until a second player shows up. `_buildHeader` parents it. */
     _buildSwitcher() {
         this._switcherBox = new St.BoxLayout({
             style_class: 'mc-player-tabs',
             orientation: Clutter.Orientation.HORIZONTAL,
-            x_align: Clutter.ActorAlign.END,
+            y_align: Clutter.ActorAlign.CENTER,
             visible: false,
         });
-        this.add_child(this._switcherBox);
     }
 
     /**
@@ -192,14 +188,13 @@ export const MediaCard = GObject.registerClass({
         }
 
         const visible = this._visibleTabs(players);
-        const overflow = players.length - visible.length;
 
         /* Rebuilding drops keyboard focus and restarts the button's hover
          * transitions, so it happens only when the row itself changes — not on
          * every metadata update from the player that is playing. */
-        const key = `${visible.map(player => player.busName).join('\n')}|${overflow}`;
+        const key = visible.map(player => player.busName).join('\n');
         if (key !== this._tabsKey)
-            this._rebuildTabs(visible, overflow, key);
+            this._rebuildTabs(visible, key);
 
         for (const player of visible) {
             const tab = this._tabs.get(player.busName);
@@ -226,16 +221,17 @@ export const MediaCard = GObject.registerClass({
     }
 
     /**
-     * At most MAX_VISIBLE_TABS icons; the rest are counted by the overflow
-     * button, which shows them all when pressed. The player on screen is always
-     * among them — the row reports which player the card is following, so
-     * leaving that one out is the one thing it must never do.
+     * At most MAX_VISIBLE_TABS icons; any further players are simply not drawn,
+     * which keeps the row beside the gear from growing without bound. The
+     * player on screen is always among them — the row reports which player the
+     * card is following, so leaving that one out is the one thing it must never
+     * do.
      *
      * @param {object[]} players every player the switcher was given
      * @returns {object[]} the ones to draw an icon for
      */
     _visibleTabs(players) {
-        if (this._expanded || players.length <= MAX_VISIBLE_TABS)
+        if (players.length <= MAX_VISIBLE_TABS)
             return players;
 
         const visible = players.slice(0, MAX_VISIBLE_TABS);
@@ -250,7 +246,7 @@ export const MediaCard = GObject.registerClass({
         return visible;
     }
 
-    _rebuildTabs(players, overflow, key) {
+    _rebuildTabs(players, key) {
         this._clearTabs();
         this._tabsKey = key;
 
@@ -274,43 +270,10 @@ export const MediaCard = GObject.registerClass({
             this._switcherBox.add_child(button);
             this._tabs.set(busName, {button, icon});
         }
-
-        if (overflow > 0)
-            this._switcherBox.add_child(this._moreButton(overflow));
     }
 
-    /**
-     * The tail of the list, collapsed into one pill: "+3". Pressing it shows
-     * every player until the card closes, which is the only way to reach the
-     * ones the cap left out.
-     *
-     * @param {number} overflow how many players are not shown
-     * @returns {object} the St.Button to append
-     */
-    _moreButton(overflow) {
-        const label = new St.Label({
-            style_class: 'mc-player-tab-more-label',
-            text: `+${overflow}`,
-            y_align: Clutter.ActorAlign.CENTER,
-            opacity: DIM_OPACITY,
-        });
-        const button = new St.Button({
-            style_class: 'mc-player-tab mc-player-tab-more',
-            can_focus: true,
-            y_align: Clutter.ActorAlign.CENTER,
-            child: label,
-        });
-        button.accessible_name = _('Show all players');
-        button.connect('clicked', () => {
-            this._expanded = true;
-            this._updateSwitcher();
-        });
-        return button;
-    }
-
-    /* Counts children rather than tabs: the overflow button is one too. */
     _clearTabs() {
-        if (this._switcherBox.get_n_children() === 0)
+        if (this._tabs.size === 0)
             return;
         this._switcherBox.destroy_all_children();
         this._tabs.clear();
@@ -364,8 +327,10 @@ export const MediaCard = GObject.registerClass({
         textBox.add_child(this._albumLabel);
         header.add_child(textBox);
 
-        /* A full-height column down the right edge: the gear pinned to the top
-         * corner, and the equalizer centred against the art. */
+        /* A full-height column down the right edge: the player tabs and the
+         * gear on the top line, and the equalizer centred against the art. The
+         * track text is a column of its own beside this one, so it never runs
+         * underneath either of them. */
         const actions = new St.BoxLayout({
             style_class: 'mc-card-actions',
             orientation: Clutter.Orientation.VERTICAL,
@@ -376,12 +341,23 @@ export const MediaCard = GObject.registerClass({
         this._prefsButton = new St.Button({
             style_class: 'mc-app-button',
             can_focus: true,
-            x_align: Clutter.ActorAlign.END,
-            y_align: Clutter.ActorAlign.START,
+            y_align: Clutter.ActorAlign.CENTER,
             child: new St.Icon({icon_name: 'emblem-system-symbolic', icon_size: 16}),
         });
         this._prefsButton.connect('clicked', () => this.emit('open-preferences'));
-        actions.add_child(this._prefsButton);
+
+        /* The top line of the column: the player tabs, then the gear pinned to
+         * the corner. With one player the tabs are hidden and this is the gear
+         * on its own, exactly as before. */
+        const topRow = new St.BoxLayout({
+            style_class: 'mc-card-actions-top',
+            orientation: Clutter.Orientation.HORIZONTAL,
+            x_align: Clutter.ActorAlign.END,
+            y_align: Clutter.ActorAlign.START,
+        });
+        topRow.add_child(this._switcherBox);
+        topRow.add_child(this._prefsButton);
+        actions.add_child(topRow);
 
         /* Expanding is what pushes this off the gear and centres it. */
         const status = new St.BoxLayout({
@@ -606,18 +582,8 @@ export const MediaCard = GObject.registerClass({
         this._active = active;
         this._equalizer.setActive(active);
         this._updateTimer();
-
-        if (active) {
+        if (active)
             this._refreshPosition();
-            return;
-        }
-
-        /* Closing the card collapses an expanded switcher, so it opens at its
-         * usual size next time rather than however it was left. */
-        if (this._expanded) {
-            this._expanded = false;
-            this._updateSwitcher();
-        }
     }
 
     /* Polling exists to move the seek bar. No seek bar on screen, no polling —
