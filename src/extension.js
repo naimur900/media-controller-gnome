@@ -81,7 +81,11 @@ class MediaIndicator extends PanelMenu.Button {
             'open-preferences', () => {
                 this.menu.close();
                 extension.openPreferences();
-            }, this);
+            },
+            /* The menu deliberately stays open: switching players is something
+             * you do to look at the other player. */
+            'player-selected', (_card, busName) =>
+                this._manager.selectPlayer(busName), this);
 
         this.menu.box.add_style_class_name('mc-card-menu');
         const item = new PopupMenu.PopupBaseMenuItem({
@@ -99,7 +103,11 @@ class MediaIndicator extends PanelMenu.Button {
                 this._card.sync();
         }, this);
 
-        this._manager.connectObject('changed', () => this.sync(), this);
+        this._manager.connectObject(
+            'changed', () => this.sync(),
+            /* A player appearing or leaving changes the switcher even when the
+             * player on screen stays put. */
+            'players-changed', () => this.sync(), this);
 
         const onPanelKeyChanged = () => {
             this._readSettings();
@@ -294,6 +302,9 @@ class MediaIndicator extends PanelMenu.Button {
         const player = this._manager.activePlayer;
         const prefs = this._prefs;
         this._card.setPlayer(player);
+        /* Only players whose proxy has landed: a tab for one that cannot be
+         * controlled yet would do nothing when pressed. */
+        this._card.setPlayers(this._manager.readyPlayers, player);
 
         if (!player) {
             /* Drop the text before hiding: a scrolling label left with content
@@ -388,6 +399,7 @@ export default class MediaControlsExtension extends Extension {
         this._settings = this.getSettings();
         this._artCache = new ArtCache();
         this._manager = new MprisManager();
+        this._applyExclusivePlayback();
         this._indicator = new MediaIndicator(this, this._settings, this._artCache, this._manager);
 
         const {box, index} = this._placement();
@@ -397,8 +409,17 @@ export default class MediaControlsExtension extends Extension {
          * the "hide when nothing is playing" state chosen during construction. */
         this._indicator.sync();
 
-        this._settings.connectObject('changed::panel-position',
-            () => this._reposition(), this);
+        this._settings.connectObject(
+            'changed::panel-position', () => this._reposition(),
+            'changed::pause-others-on-play',
+            () => this._applyExclusivePlayback(), this);
+    }
+
+    /* The manager does the pausing, but the setting lives here: mpris.js knows
+     * nothing about GSettings keys. */
+    _applyExclusivePlayback() {
+        this._manager.exclusivePlayback =
+            this._settings.get_boolean('pause-others-on-play');
     }
 
     _panelBoxes() {

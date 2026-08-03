@@ -235,6 +235,10 @@ export const MprisPlayer = GObject.registerClass({
         return this._playerProxy?.CanPlay ?? true;
     }
 
+    get canPause() {
+        return this._playerProxy?.CanPause ?? true;
+    }
+
     get canGoNext() {
         return this._playerProxy?.CanGoNext ?? true;
     }
@@ -325,6 +329,17 @@ export const MprisPlayer = GObject.registerClass({
 
     playPause() {
         this._call('PlayPause');
+    }
+
+    /**
+     * Pause outright rather than toggling. PlayPause would restart a player
+     * that has already stopped by the time the call lands, which is exactly
+     * the wrong outcome when the point is to get out of another player's way.
+     */
+    pause() {
+        if (!this.canPause)
+            return;
+        this._call('Pause');
     }
 
     next() {
@@ -462,6 +477,9 @@ export const MprisManager = GObject.registerClass({
     Signals: {
         /* Emitted when the active player, or anything about it, changes. */
         'changed': {},
+        /* Emitted when the set of running players changes, or when one of them
+         * gains the identity or icon the switcher renders it with. */
+        'players-changed': {},
     },
 }, class MprisManager extends GObject.Object {
     _init() {
@@ -470,7 +488,17 @@ export const MprisManager = GObject.registerClass({
         this._players = new Map();
         this._playerSignals = new Map();
         this._active = null;
+        this._pinned = null;
+        this._roster = '';
+        this._statuses = new Map();
+        this._loaded = false;
         this._cancellable = new Gio.Cancellable();
+
+        /* Set by the extension from the `pause-others-on-play` setting: when a
+         * player starts, whichever other player was playing is paused. Off
+         * until the extension says otherwise, so nothing touches the user's
+         * playback before the setting has been read. */
+        this.exclusivePlayback = false;
 
         const DBusProxy = Gio.DBusProxy.makeProxyWrapper(DBusIface);
         this._dbusProxy = new DBusProxy(Gio.DBus.session,
@@ -494,6 +522,41 @@ export const MprisManager = GObject.registerClass({
         return [...this._players.values()];
     }
 
+    /**
+     * The players the UI can actually control and switch between, in a stable
+     * order: the map is keyed by arrival, so a player that quits and comes back
+     * would otherwise move the switcher's tabs around under the pointer.
+     */
+    get readyPlayers() {
+        return this.players
+            .filter(player => player.ready)
+            .sort((a, b) => a.busName.localeCompare(b.busName));
+    }
+
+    /**
+     * Show this player, whatever else is playing.
+     *
+     * The choice sticks: _selectActive() honours it until that player leaves
+     * the bus, so picking VLC while Spotify is playing is not undone by
+     * Spotify's next metadata update. Picking the player that is already
+     * active still pins it, which is how the user re-takes control after the
+     * automatic selection moved on.
+     *
+     * @param {string} busName the player's MPRIS bus name
+     */
+    selectPlayer(busName) {
+        const player = this._players.get(busName);
+        if (!player)
+            return;
+
+        this._pinned = busName;
+        if (this._active === player)
+            return;
+
+        this._active = player;
+        this.emit('changed');
+    }
+
     _loadExistingPlayers() {
         /* The result must not be destructured in the parameter list: it is null
          * on error (including cancellation on destroy). */
@@ -505,6 +568,10 @@ export const MprisManager = GObject.registerClass({
                 if (this._isPlayerName(name))
                     this._addPlayer(name);
             }
+            /* Everything from here on is a player that arrived while we were
+             * watching — the distinction _noteStatus() draws before pausing
+             * anything. */
+            this._loaded = true;
             this._selectActive();
         }, this._cancellable);
     }
@@ -533,7 +600,18 @@ export const MprisManager = GObject.registerClass({
 
         const player = new MprisPlayer(busName);
         this._players.set(busName, player);
+
+        /* A player that was already on the bus when the extension started has
+         * no entry: _noteStatus() adopts whatever it is doing without treating
+         * it as having just started, so enabling the extension never pauses
+         * music that was already running. One that joins later starts from
+         * "not playing", so its first Playing counts as a start. */
+        if (this._loaded)
+            this._statuses.set(busName, 'Stopped');
+
         this._playerSignals.set(busName, player.connect('changed', () => {
+            this._noteStatus(player);
+
             const wasActive = this._active === player;
             /* Emits 'changed' itself when the active player flips. */
             this._selectActive();
@@ -543,7 +621,76 @@ export const MprisManager = GObject.registerClass({
              * has not already announced it. */
             if (wasActive && this._active === player)
                 this.emit('changed');
+
+            /* Both proxies land after the player is added, so this is where a
+             * new player picks up its identity and icon. */
+            this._notifyRoster();
         }));
+        this._notifyRoster();
+    }
+
+    /**
+     * Watch one player's PlaybackStatus for the moment it starts, which is the
+     * only thing exclusive playback acts on. Every other property change moves
+     * through here too, so it compares against the last status rather than
+     * asking "is it playing" — otherwise a track's position updates would keep
+     * re-pausing everything else.
+     *
+     * @param {object} player the MprisPlayer that just emitted 'changed'
+     */
+    _noteStatus(player) {
+        const previous = this._statuses.get(player.busName);
+        const status = player.status;
+        if (status === previous)
+            return;
+
+        this._statuses.set(player.busName, status);
+
+        /* `undefined` is a player we are seeing for the first time and were not
+         * around to watch start; leave it, and everyone else, alone. */
+        if (previous !== undefined && status === 'Playing')
+            this._pauseOthers(player);
+    }
+
+    /**
+     * @param {object} player the player that just started, and is spared
+     */
+    _pauseOthers(player) {
+        if (!this.exclusivePlayback)
+            return;
+
+        for (const other of this._players.values()) {
+            if (other === player || !other.isPlaying)
+                continue;
+
+            other.pause();
+            /* Record it now: the player's own PropertiesChanged will confirm
+             * this in a moment, and until then a second start elsewhere should
+             * not see it as still playing and pause it twice. */
+            this._statuses.set(other.busName, 'Paused');
+        }
+    }
+
+    /**
+     * The switcher renders one button per player out of exactly these
+     * properties, so this is what "the roster changed" means. Players emit
+     * 'changed' several times a second while playing; comparing the signature
+     * keeps that from rebuilding a row of buttons that has not moved.
+     */
+    _rosterSignature() {
+        /* JSON rather than a joined string: an identity is arbitrary text from
+         * the player, and could otherwise forge a field boundary. */
+        return JSON.stringify(this.players.map(player =>
+            [player.busName, player.ready, player.identity, player.desktopEntry]));
+    }
+
+    _notifyRoster() {
+        const signature = this._rosterSignature();
+        if (signature === this._roster)
+            return;
+
+        this._roster = signature;
+        this.emit('players-changed');
     }
 
     _removePlayer(busName) {
@@ -556,12 +703,14 @@ export const MprisManager = GObject.registerClass({
             player.disconnect(signalId);
         this._playerSignals.delete(busName);
         this._players.delete(busName);
+        this._statuses.delete(busName);
 
         /* `_active` is left pointing at the removed player on purpose:
          * _selectActive() compares against it to decide whether to emit
          * 'changed'. Clearing it here would swallow that signal, leaving the
          * panel showing a player that has quit. */
         player.destroy();
+        this._notifyRoster();
     }
 
     /* Scans the map in place; `players` would allocate a fresh array per call,
@@ -575,20 +724,30 @@ export const MprisManager = GObject.registerClass({
     }
 
     /**
-     * Prefer whatever is actually playing. Otherwise keep the current player so
-     * the panel does not jump around when a background player updates metadata.
+     * A player the user picked wins outright. Failing that, prefer whatever is
+     * actually playing, and otherwise keep the current player so the panel does
+     * not jump around when a background player updates metadata.
      */
     _selectActive() {
         const previous = this._active;
+        const pinned = this._pinned ? this._players.get(this._pinned) : null;
 
-        if (!this._active || !this._players.has(this._active.busName))
-            this._active = null;
+        /* The pinned player quit; fall back to choosing one automatically. */
+        if (!pinned)
+            this._pinned = null;
 
-        if (!this._active?.isPlaying)
-            this._active = this._find(p => p.isPlaying) ?? this._active;
+        if (pinned) {
+            this._active = pinned;
+        } else {
+            if (!this._active || !this._players.has(this._active.busName))
+                this._active = null;
 
-        if (!this._active || !this._players.has(this._active.busName))
-            this._active = this._find(p => p.ready);
+            if (!this._active?.isPlaying)
+                this._active = this._find(p => p.isPlaying) ?? this._active;
+
+            if (!this._active || !this._players.has(this._active.busName))
+                this._active = this._find(p => p.ready);
+        }
 
         if (previous !== this._active)
             this.emit('changed');
@@ -606,5 +765,7 @@ export const MprisManager = GObject.registerClass({
             this._removePlayer(busName);
 
         this._active = null;
+        this._pinned = null;
+        this._statuses.clear();
     }
 });

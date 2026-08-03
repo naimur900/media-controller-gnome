@@ -37,10 +37,22 @@ Rhythmbox, mpv, and so on.
 - **Playback controls** in the panel: previous, skip backward, play/pause, skip
   forward, next, plus optional shuffle and loop buttons. Each button can be
   shown or hidden independently.
+- **Click the album art** to raise the player's own window. Players that do not
+  support being raised leave the artwork as a plain picture.
 - **Now-playing card** when you click the indicator: album art, a wrapping title,
   artist and album, a draggable seek bar with elapsed and remaining time, and
   large transport controls including skip buttons — with shuffle on the card's
   left edge and loop on its right, aligned with the controls.
+- **Player switching** when more than one player is running: a strip of app icons
+  appears on its own row at the top of the card, and clicking one puts that player
+  in the panel. The choice sticks until that player quits, so picking VLC is not
+  undone by Spotify starting a new track. Three icons are shown at most; any beyond
+  that collapse into a `+3` button that reveals the rest. With a single player the
+  strip stays hidden and the card looks exactly as it always did.
+- **One player at a time**: starting playback in one player pauses whichever
+  other player was playing, so hitting play in VLC no longer leaves Spotify
+  running underneath it. Players already playing when the extension starts are
+  left alone, and the whole behavior can be switched off.
 - **Shuffle and loop** control the player directly: shuffle toggles on and off,
   loop cycles between off, repeating the whole queue, and repeating one track,
   and an engaged mode lights up in your accent color.
@@ -108,6 +120,8 @@ in on Wayland, because the shell caches ES modules for the life of the process.
 | `controls-on-left`                                | off             | Put the buttons before the text                         |
 | `hide-when-inactive`                              | on              | Hide the indicator when no player is running            |
 | `card-show-art`                                   | on              | Album art in the card                                   |
+| `card-show-player-switcher`                       | on              | Icons for switching players, when more than one is running |
+| `pause-others-on-play`                            | on              | Starting one player pauses whichever other was playing  |
 | `card-show-seek-bar`                              | on              | Seek bar in the card                                    |
 | `card-show-seek-buttons`                          | on              | Skip buttons in the card                                |
 | `card-show-shuffle` / `card-show-loop`            | on              | Shuffle and loop buttons on the card's edges            |

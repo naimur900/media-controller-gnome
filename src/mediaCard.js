@@ -28,6 +28,12 @@ const POSITION_POLL_SECONDS = 1;
  * still does the real work, this only stops the pathological case. */
 const MAX_TITLE_CHARS = 120;
 
+/* How many player icons the switcher draws before collapsing the rest into a
+ * "+N" button. Three keeps the row a glanceable strip: a session with more
+ * players than that is one where the row would otherwise become the loudest
+ * thing on the card. */
+const MAX_VISIBLE_TABS = 3;
+
 /* Keyed by the `card-art-size` enum nick. `icon` sizes the fallback player icon
  * so it keeps roughly the same inset as the artwork it stands in for, and the
  * radius tracks the size so the corners stay proportionally round. */
@@ -89,6 +95,8 @@ export const MediaCard = GObject.registerClass({
         'activated': {},
         /* The gear button was pressed. */
         'open-preferences': {},
+        /* A switcher tab was pressed; carries the player's MPRIS bus name. */
+        'player-selected': {param_types: [GObject.TYPE_STRING]},
     },
 }, class MediaCard extends St.BoxLayout {
     _init(artCache, settings) {
@@ -114,7 +122,13 @@ export const MediaCard = GObject.registerClass({
         this._artSize = ART_SIZES[DEFAULT_ART_SIZE];
         this._length = 0;
         this._position = 0;
+        this._roster = [];
+        this._tabs = new Map();
+        this._tabsKey = null;
+        this._activeBusName = null;
+        this._expanded = false;
 
+        this._buildSwitcher();
         this._buildHeader();
         this._buildSeekBar();
         this._buildControls();
@@ -125,6 +139,8 @@ export const MediaCard = GObject.registerClass({
             this._settings.connect('changed::card-show-seek-buttons', () => this.sync()),
             this._settings.connect('changed::card-show-shuffle', () => this.sync()),
             this._settings.connect('changed::card-show-loop', () => this.sync()),
+            this._settings.connect('changed::card-show-player-switcher',
+                () => this._updateSwitcher()),
             this._settings.connect('changed::card-width', () => this._applyWidth()),
             this._settings.connect('changed::card-art-size', () => this._applyArtSize()),
         ];
@@ -134,13 +150,184 @@ export const MediaCard = GObject.registerClass({
         this.connect('destroy', () => this._onDestroy());
     }
 
+    /* One tab per running player, on a row of its own along the top of the
+     * card. Nothing else shares that row: the header below it then spans the
+     * full width, which is what keeps a long title out of a narrow column.
+     * Hidden — and left empty — whenever there is nothing to switch between,
+     * which is the usual case, so the card pays nothing for the feature until a
+     * second player shows up. */
+    _buildSwitcher() {
+        this._switcherBox = new St.BoxLayout({
+            style_class: 'mc-player-tabs',
+            orientation: Clutter.Orientation.HORIZONTAL,
+            x_align: Clutter.ActorAlign.END,
+            visible: false,
+        });
+        this.add_child(this._switcherBox);
+    }
+
+    /**
+     * Hand the card the players it can switch between. Called on every sync, so
+     * it does as little as possible when nothing has moved.
+     *
+     * @param {object[]} players the players to offer, in a stable order
+     * @param {object|null} active the one currently on screen
+     */
+    setPlayers(players, active) {
+        this._roster = players;
+        this._activeBusName = active?.busName ?? null;
+        this._updateSwitcher();
+    }
+
+    _updateSwitcher() {
+        const players = this._roster;
+        /* One player is not a choice, and zero is the idle card. */
+        const show = players.length > 1 &&
+            this._settings.get_boolean('card-show-player-switcher');
+
+        this._switcherBox.visible = show;
+        if (!show) {
+            this._clearTabs();
+            return;
+        }
+
+        const visible = this._visibleTabs(players);
+        const overflow = players.length - visible.length;
+
+        /* Rebuilding drops keyboard focus and restarts the button's hover
+         * transitions, so it happens only when the row itself changes — not on
+         * every metadata update from the player that is playing. */
+        const key = `${visible.map(player => player.busName).join('\n')}|${overflow}`;
+        if (key !== this._tabsKey)
+            this._rebuildTabs(visible, overflow, key);
+
+        for (const player of visible) {
+            const tab = this._tabs.get(player.busName);
+            if (!tab)
+                continue;
+
+            /* Both of these resolve asynchronously with the app proxy, so a tab
+             * built a moment ago may still be showing a generic icon and no
+             * name at all. The name is the tab's only label — nothing is drawn
+             * beside the icon — so it also carries the accessible name. */
+            tab.icon.gicon = player.appIcon;
+            tab.button.accessible_name = player.identity;
+
+            /* The one on screen is fully lit; the others recede. */
+            const isActive = player.busName === this._activeBusName;
+            tab.icon.opacity = isActive ? 255 : DIM_OPACITY;
+            if (isActive !== tab.button.has_style_class_name('mc-player-tab-active')) {
+                if (isActive)
+                    tab.button.add_style_class_name('mc-player-tab-active');
+                else
+                    tab.button.remove_style_class_name('mc-player-tab-active');
+            }
+        }
+    }
+
+    /**
+     * At most MAX_VISIBLE_TABS icons; the rest are counted by the overflow
+     * button, which shows them all when pressed. The player on screen is always
+     * among them — the row reports which player the card is following, so
+     * leaving that one out is the one thing it must never do.
+     *
+     * @param {object[]} players every player the switcher was given
+     * @returns {object[]} the ones to draw an icon for
+     */
+    _visibleTabs(players) {
+        if (this._expanded || players.length <= MAX_VISIBLE_TABS)
+            return players;
+
+        const visible = players.slice(0, MAX_VISIBLE_TABS);
+        if (visible.some(player => player.busName === this._activeBusName))
+            return visible;
+
+        /* The active player is further down the list: it takes the last slot,
+         * so the ones before it keep their places. */
+        const active = players.find(player => player.busName === this._activeBusName);
+        if (active)
+            visible[MAX_VISIBLE_TABS - 1] = active;
+        return visible;
+    }
+
+    _rebuildTabs(players, overflow, key) {
+        this._clearTabs();
+        this._tabsKey = key;
+
+        for (const player of players) {
+            /* Icons only: names would make each tab as wide as the player is
+             * called, and the row is meant to stay a strip rather than become a
+             * list. The identity goes on the button as its accessible name. */
+            const icon = new St.Icon({icon_size: 16});
+            const button = new St.Button({
+                style_class: 'mc-player-tab',
+                can_focus: true,
+                y_align: Clutter.ActorAlign.CENTER,
+                child: icon,
+            });
+
+            /* The bus name, not the player object: by the time this fires the
+             * player may have quit, and the manager is the one that knows. */
+            const {busName} = player;
+            button.connect('clicked', () => this.emit('player-selected', busName));
+
+            this._switcherBox.add_child(button);
+            this._tabs.set(busName, {button, icon});
+        }
+
+        if (overflow > 0)
+            this._switcherBox.add_child(this._moreButton(overflow));
+    }
+
+    /**
+     * The tail of the list, collapsed into one pill: "+3". Pressing it shows
+     * every player until the card closes, which is the only way to reach the
+     * ones the cap left out.
+     *
+     * @param {number} overflow how many players are not shown
+     * @returns {object} the St.Button to append
+     */
+    _moreButton(overflow) {
+        const label = new St.Label({
+            style_class: 'mc-player-tab-more-label',
+            text: `+${overflow}`,
+            y_align: Clutter.ActorAlign.CENTER,
+            opacity: DIM_OPACITY,
+        });
+        const button = new St.Button({
+            style_class: 'mc-player-tab mc-player-tab-more',
+            can_focus: true,
+            y_align: Clutter.ActorAlign.CENTER,
+            child: label,
+        });
+        button.accessible_name = _('Show all players');
+        button.connect('clicked', () => {
+            this._expanded = true;
+            this._updateSwitcher();
+        });
+        return button;
+    }
+
+    /* Counts children rather than tabs: the overflow button is one too. */
+    _clearTabs() {
+        if (this._switcherBox.get_n_children() === 0)
+            return;
+        this._switcherBox.destroy_all_children();
+        this._tabs.clear();
+        this._tabsKey = null;
+    }
+
     _buildHeader() {
         const header = new St.BoxLayout({
             style_class: 'mc-card-header',
             orientation: Clutter.Orientation.HORIZONTAL,
         });
 
-        this._artBin = new St.Bin({
+        /* The artwork is the card's "go to the app" target: clicking it raises
+         * the player's window. A button rather than a bin, so hover and focus
+         * come from the theme — St.Button is itself a St.Bin, so it still takes
+         * the fallback icon as its child and the sizing style as its own. */
+        this._artButton = new St.Button({
             style_class: 'mc-art',
             y_align: Clutter.ActorAlign.CENTER,
         });
@@ -148,8 +335,12 @@ export const MediaCard = GObject.registerClass({
             icon_name: 'audio-x-generic-symbolic',
             opacity: DIM_OPACITY,
         });
-        this._artBin.set_child(this._artFallback);
-        header.add_child(this._artBin);
+        this._artButton.set_child(this._artFallback);
+        this._artButton.connect('clicked', () => {
+            this._player?.raise();
+            this.emit('activated');
+        });
+        header.add_child(this._artButton);
 
         const textBox = new St.BoxLayout({
             style_class: 'mc-card-text',
@@ -174,7 +365,7 @@ export const MediaCard = GObject.registerClass({
         header.add_child(textBox);
 
         /* A full-height column down the right edge: the gear pinned to the top
-         * corner, and the player icon plus equalizer centred against the art. */
+         * corner, and the equalizer centred against the art. */
         const actions = new St.BoxLayout({
             style_class: 'mc-card-actions',
             orientation: Clutter.Orientation.VERTICAL,
@@ -200,19 +391,6 @@ export const MediaCard = GObject.registerClass({
             y_align: Clutter.ActorAlign.CENTER,
             y_expand: true,
         });
-
-        this._appButton = new St.Button({
-            style_class: 'mc-app-button',
-            can_focus: true,
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-        this._appIcon = new St.Icon({icon_size: 16, style_class: 'mc-app-icon'});
-        this._appButton.set_child(this._appIcon);
-        this._appButton.connect('clicked', () => {
-            this._player?.raise();
-            this.emit('activated');
-        });
-        status.add_child(this._appButton);
 
         this._equalizer = new Equalizer();
         status.add_child(this._equalizer);
@@ -389,7 +567,7 @@ export const MediaCard = GObject.registerClass({
         const image = this._artPath
             ? ` background-image: ${cssUrl(this._artPath)};`
             : '';
-        this._artBin.style =
+        this._artButton.style =
             `width: ${size}px; height: ${size}px; border-radius: ${radius}px;${image}`;
     }
 
@@ -428,8 +606,18 @@ export const MediaCard = GObject.registerClass({
         this._active = active;
         this._equalizer.setActive(active);
         this._updateTimer();
-        if (active)
+
+        if (active) {
             this._refreshPosition();
+            return;
+        }
+
+        /* Closing the card collapses an expanded switcher, so it opens at its
+         * usual size next time rather than however it was left. */
+        if (this._expanded) {
+            this._expanded = false;
+            this._updateSwitcher();
+        }
     }
 
     /* Polling exists to move the seek bar. No seek bar on screen, no polling —
@@ -503,7 +691,7 @@ export const MediaCard = GObject.registerClass({
     _updateArt() {
         const player = this._player;
         const showArt = this._settings.get_boolean('card-show-art');
-        this._artBin.visible = showArt;
+        this._artButton.visible = showArt;
 
         /* Forget the current art while hidden, so re-enabling the setting on the
          * same track resolves it again instead of short-circuiting below. */
@@ -550,7 +738,7 @@ export const MediaCard = GObject.registerClass({
             this._albumLabel.text = '';
             this._albumLabel.visible = false;
             this._seekBox.visible = false;
-            this._appButton.visible = false;
+            this._setRaisable(false);
             this._backButton.visible = false;
             this._forwardButton.visible = false;
             this._shuffleButton.visible = false;
@@ -583,8 +771,7 @@ export const MediaCard = GObject.registerClass({
         this._setSensitive(this._nextButton, player.canGoNext);
         this._setSensitive(this._playButton, player.canPlay);
 
-        this._appIcon.gicon = player.appIcon;
-        this._appButton.visible = player.canRaise;
+        this._setRaisable(player.canRaise, player.identity);
 
         this._length = player.length;
         const showSeek = this._settings.get_boolean('card-show-seek-bar') &&
@@ -620,6 +807,21 @@ export const MediaCard = GObject.registerClass({
         actor.reactive = sensitive;
     }
 
+    /**
+     * The artwork only behaves like a button for a player that can actually be
+     * raised; for the rest it goes back to being a picture, with no hover cue
+     * and nothing to tab to.
+     *
+     * @param {boolean} raisable whether the player implements Raise
+     * @param {string} identity names the target for screen readers
+     */
+    _setRaisable(raisable, identity = '') {
+        this._artButton.reactive = raisable;
+        this._artButton.can_focus = raisable;
+        this._artButton.track_hover = raisable;
+        this._artButton.accessible_name = raisable ? identity : '';
+    }
+
     _onDestroy() {
         /* Orphans any in-flight art download: its callback checks the
          * generation and finds it stale. */
@@ -638,5 +840,8 @@ export const MediaCard = GObject.registerClass({
             this._settings.disconnect(id);
         this._settingsSignals = [];
         this._player = null;
+        /* The tab actors go with the card; these only hold player references. */
+        this._tabs.clear();
+        this._roster = [];
     }
 });

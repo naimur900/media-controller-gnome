@@ -137,6 +137,18 @@
       <description>Only has an effect while card-show-art is set. The fallback player icon scales to match.</description>
     </key>
 
+    <key name="pause-others-on-play" type="b">
+      <default>true</default>
+      <summary>Only let one player play at a time</summary>
+      <description>When a player starts playing, whichever other player was playing is paused. Players already running when the extension starts are left alone.</description>
+    </key>
+
+    <key name="card-show-player-switcher" type="b">
+      <default>true</default>
+      <summary>Show the player switcher in the card</summary>
+      <description>A strip of player icons beside the card's settings button, one per running media player. Only shown while more than one player is running.</description>
+    </key>
+
     <key name="card-show-seek-bar" type="b">
       <default>true</default>
       <summary>Show the seek bar in the card</summary>
