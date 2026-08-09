@@ -196,6 +196,18 @@ export default class MediaControlsPreferences extends ExtensionPreferences {
             _('Card width'), _('Measured in pixels.'), 400, 560, 10));
         page.add(appearance);
 
+        const multiple = new Adw.PreferencesGroup({
+            title: _('Multiple players'),
+            description: _('What happens when more than one media player is running.'),
+        });
+        multiple.add(this._switchRow(settings, 'card-show-player-switcher',
+            _('Player switcher'),
+            _('Player icons beside the settings button, for choosing which player the card and panel follow.')));
+        multiple.add(this._switchRow(settings, 'pause-others-on-play',
+            _('Play one player at a time'),
+            _('When a player starts playing, pause whichever other player was playing. Players already running when the extension starts are left alone.')));
+        page.add(multiple);
+
         const playback = new Adw.PreferencesGroup({
             title: _('Playback'),
             description: _('Optional controls the card offers alongside play, pause and track switching.'),

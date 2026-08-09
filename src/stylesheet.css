@@ -61,7 +61,35 @@
   padding: 14px;
 }
 
-/* ---------- Header: art, text, app button ---------- */
+/* ---------- Player switcher ---------- */
+
+/* A column of app icons beside the gear, shown only while more than one player
+ * is running. The tray around them is what reads as a switch rather than as a
+ * handful of loose buttons; the fully round ends suit a stack of circular icon
+ * buttons the same way they suited a row of them. */
+.mc-player-tabs {
+  spacing: 2px;
+  padding: 2px;
+  border-radius: 99px;
+  background-color: rgba(127, 127, 127, 0.15);
+}
+
+.mc-player-tab {
+  border-radius: 99px;
+  padding: 4px;
+}
+
+.mc-player-tab:hover {
+  background-color: rgba(127, 127, 127, 0.25);
+}
+
+/* The selected tab reads as a raised segment, in the same neutral grey the rest
+ * of the card uses, so it works on light and dark themes alike. */
+.mc-player-tab-active {
+  background-color: rgba(127, 127, 127, 0.4);
+}
+
+/* ---------- Header: art, text, equalizer ---------- */
 
 .mc-card-header {
   spacing: 12px;
@@ -75,6 +103,15 @@
   background-color: rgba(127, 127, 127, 0.2);
   background-size: cover;
   border: 1px solid rgba(85, 85, 85, 0.4);
+}
+
+/* Clicking the artwork raises the player's window, so it needs a cue that it is
+ * a target at all. The accent color is the same one the equalizer and the seek
+ * bar use, and only the border moves — the artwork itself stays untouched.
+ * Players that cannot be raised are left non-reactive, so they never hover. */
+.mc-art:hover,
+.mc-art:focus {
+  border-color: -st-accent-color;
 }
 
 .mc-card-text {
@@ -101,7 +138,12 @@
   spacing: 4px;
 }
 
-/* The player icon and the equalizer, side by side. */
+/* The player switcher column and the gear, side by side. */
+.mc-card-actions-top {
+  spacing: 4px;
+}
+
+/* Holds the equalizer, centred against the artwork. */
 .mc-card-status {
   spacing: 6px;
 }
