@@ -1,10 +1,3 @@
-/* Media Controls
- *
- * The card pins its own background color but inherits the shell's popup-menu
- * foreground, so text and icons still follow the theme and the user's accent
- * color.
- */
-
 /* ---------- Panel indicator ---------- */
 
 .mc-panel-button {
@@ -49,13 +42,11 @@
 /* ---------- Card container ---------- */
 .mc-card-menu {
   padding: 0;
-  background-color: #222226;
 }
 
 .mc-card-item {
   padding: 0;
   margin: 0;
-  border-radius: 20px;
 }
 
 .mc-card-item:hover,
@@ -130,20 +121,17 @@
 .mc-card-title {
   font-weight: 700;
   font-size: 1.05em;
-  color: #ffffff;
 }
 
 .mc-card-artist {
   font-weight: 500;
   font-size: 0.9em;
-  color: rgba(255, 255, 255, 0.72);
 }
 
 .mc-card-album {
   font-weight: 400;
   font-size: 0.8em;
   letter-spacing: 0.2px;
-  color: rgba(255, 255, 255, 0.45);
 }
 
 .mc-card-actions {

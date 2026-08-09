@@ -318,8 +318,8 @@ export const MediaCard = GObject.registerClass({
             x_expand: true,
         });
         this._titleLabel = new St.Label({style_class: 'mc-card-title', text: _('Nothing playing')});
-        this._artistLabel = new St.Label({style_class: 'mc-card-artist', text: ''});
-        this._albumLabel = new St.Label({style_class: 'mc-card-album', text: ''});
+        this._artistLabel = new St.Label({style_class: 'mc-card-artist dim-label', text: ''});
+        this._albumLabel = new St.Label({style_class: 'mc-card-album dim-label', text: ''});
         /* The card has a fixed width, so a long title wraps onto further lines
          * rather than being cut off. Breaking mid-word is the fallback for a
          * single word too long to fit on a line of its own. */
