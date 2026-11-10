@@ -64,8 +64,8 @@ Rhythmbox, mpv, and so on.
 ## Features
 
 - **Panel indicator** showing the player icon, track title and artist, in a
-  fixed-width slot so it does not resize as tracks change. With a minimum width
-  below the maximum, the slot is as wide as the text between the two.
+  slot as wide as the text, between a minimum and a maximum width. Set both the
+  same for a slot that does not resize as tracks change.
 - **Scrolling text**, on by default: text too wide for that slot scrolls past it
   carousel-style instead of being ellipsized, once for each new track.
 - **Playback controls** in the panel: previous, skip backward, play/pause, skip
@@ -179,7 +179,7 @@ in on Wayland, because the shell caches ES modules for the life of the process.
 | `show-player-icon`                                | on              | Application icon in the panel                           |
 | `show-title` / `show-artist`                      | on              | Panel text                                              |
 | `panel-text-width`                                | 300             | Maximum width of the panel text, in pixels              |
-| `panel-text-min-width`                            | 300             | Minimum width of the panel text; the text takes its own width between the two |
+| `panel-text-min-width`                            | 100             | Minimum width of the panel text; the text takes its own width between the two |
 | `scroll-text`                                     | on              | Scroll text wider than that once per track, rather than ellipsizing it |
 | `scroll-direction`                                | `left-to-right` | `left-to-right` or `right-to-left`                      |
 | `scroll-speed`                                    | 30              | Scrolling speed, in pixels per second                   |

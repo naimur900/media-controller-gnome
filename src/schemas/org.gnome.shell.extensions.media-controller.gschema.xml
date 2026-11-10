@@ -91,7 +91,7 @@
       <description>The track text is never wider than this. Text that does not fit is truncated with an ellipsis, or scrolled when scroll-text is set.</description>
     </key>
     <key name="panel-text-min-width" type="i">
-      <default>300</default>
+      <default>100</default>
       <range min="0" max="600"/>
       <summary>Minimum width of the panel text, in pixels</summary>
       <description>The track text takes its own width, but never less than this and never more than panel-text-width. At or above panel-text-width, the text always occupies panel-text-width.</description>
