@@ -64,7 +64,8 @@ Rhythmbox, mpv, and so on.
 ## Features
 
 - **Panel indicator** showing the player icon, track title and artist, in a
-  fixed-width slot so it does not resize as tracks change.
+  slot as wide as the text, between a minimum and a maximum width. Set both the
+  same for a slot that does not resize as tracks change.
 - **Scrolling text**, on by default: text too wide for that slot scrolls past it
   carousel-style instead of being ellipsized, once for each new track.
 - **Playback controls** in the panel: previous, skip backward, play/pause, skip
@@ -177,7 +178,8 @@ in on Wayland, because the shell caches ES modules for the life of the process.
 | `show-shuffle` / `show-loop`                      | off             | Panel shuffle and loop buttons                          |
 | `show-player-icon`                                | on              | Application icon in the panel                           |
 | `show-title` / `show-artist`                      | on              | Panel text                                              |
-| `panel-text-width`                                | 300             | Width of the panel text, in pixels                      |
+| `panel-text-width`                                | 300             | Maximum width of the panel text, in pixels              |
+| `panel-text-min-width`                            | 100             | Minimum width of the panel text; the text takes its own width between the two |
 | `scroll-text`                                     | on              | Scroll text wider than that once per track, rather than ellipsizing it |
 | `scroll-direction`                                | `left-to-right` | `left-to-right` or `right-to-left`                      |
 | `scroll-speed`                                    | 30              | Scrolling speed, in pixels per second                   |
@@ -211,7 +213,7 @@ in on Wayland, because the shell caches ES modules for the life of the process.
 | [src/outputList.js](src/outputList.js)         | The card's list of sound outputs            |
 | [src/soundOutputs.js](src/soundOutputs.js)     | The system's sound outputs, and switching them |
 | [src/lyrics.js](src/lyrics.js)                 | Finds lyrics and parses LRC                 |
-| [src/scrollingLabel.js](src/scrollingLabel.js) | The fixed-width panel label and its marquee |
+| [src/scrollingLabel.js](src/scrollingLabel.js) | The panel label, as wide as its text within bounds, and its marquee |
 | [src/mpris.js](src/mpris.js)                   | MPRIS2 D-Bus client and player tracking     |
 | [src/playerIcons.js](src/playerIcons.js)       | Matches a player to its app: icon, name, kind |
 | [src/artCache.js](src/artCache.js)             | Resolves and caches album art               |
