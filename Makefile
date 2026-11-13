@@ -48,7 +48,7 @@ prefs:
 # Syntax-checks every module without a running shell.
 check:
 	@for f in $(SRC)/*.js; do \
-		node --check "$$f" >/dev/null 2>&1 && echo "ok   $$f" || { echo "FAIL $$f"; node --check "$$f"; exit 1; }; \
+		node --input-type=module --check < "$$f" >/dev/null 2>&1 && echo "ok   $$f" || { echo "FAIL $$f"; node --input-type=module --check < "$$f"; exit 1; }; \
 	done
 	@glib-compile-schemas --strict --dry-run $(SRC)/schemas/ && echo "ok   schemas"
 	@python3 -c "import json;json.load(open('$(SRC)/metadata.json'))" && echo "ok   metadata.json"
@@ -93,6 +93,7 @@ pack: schemas
 		"--extra-source=$(CURDIR)/LICENSE" \
 		--schema=schemas/org.gnome.shell.extensions.media-controller.gschema.xml \
 		--force
+	cd $(SRC) && zip -q -u "$(CURDIR)/$(ZIP)" schemas/gschemas.compiled
 
 # Live extension logs. Ctrl-C to stop.
 logs:
