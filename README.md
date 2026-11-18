@@ -121,6 +121,10 @@ Rhythmbox, mpv, and so on.
   the controls turn white to sit on it, and the player list becomes a sheet of
   the same glass. Tracks without artwork keep the plain card, as does switching
   the option off.
+- **No duplicate player**, on by default: GNOME's own media controls in the
+  notification list under the clock are hidden, since the indicator and card
+  already show the same player. They come back when the option or the
+  extension is turned off.
 - **Configurable panel position**: far left, left, center, right, or far right.
 - Follows the shell theme: the card is light in the shell's light style and
   dark in its dark style, and wears your accent color in both. With colors from
@@ -190,6 +194,7 @@ in on Wayland, because the shell caches ES modules for the life of the process.
 | `controls-on-left`                                | off             | Put the buttons before the text                         |
 | `hide-when-inactive`                              | on              | Hide the indicator when no player is running            |
 | `scroll-to-change-volume`                         | on              | Scroll over the indicator to turn the player up or down |
+| `hide-shell-media-controls`                       | on              | Hide GNOME's own media controls in the notification list |
 | `card-show-art`                                   | on              | Album art in the card                                   |
 | `card-art-size`                                   | `large`         | `small`, `medium` or `large`: 80, 104 or 136 pixels     |
 | `card-art-backdrop`                               | on              | Frosted backdrop blurred from the album art, behind the card |
@@ -218,6 +223,7 @@ in on Wayland, because the shell caches ES modules for the life of the process.
 | [src/outputList.js](src/outputList.js)         | The card's list of sound outputs            |
 | [src/soundOutputs.js](src/soundOutputs.js)     | The system's sound outputs, and switching them |
 | [src/playerVolume.js](src/playerVolume.js)     | Scrolling over the indicator: the player's volume, or its sound stream's |
+| [src/shellMediaControls.js](src/shellMediaControls.js) | Hides GNOME's own media controls in the notification list |
 | [src/lyrics.js](src/lyrics.js)                 | Finds lyrics and parses LRC                 |
 | [src/scrollingLabel.js](src/scrollingLabel.js) | The fixed-width panel label and its marquee |
 | [src/mpris.js](src/mpris.js)                   | MPRIS2 D-Bus client and player tracking     |

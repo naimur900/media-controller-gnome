@@ -19,6 +19,7 @@ import {MediaCard} from './mediaCard.js';
 import {MprisManager} from './mpris.js';
 import {PlayerVolume, scrollSteps} from './playerVolume.js';
 import {ScrollingLabel} from './scrollingLabel.js';
+import {ShellMediaControls} from './shellMediaControls.js';
 import {SoundOutputs} from './soundOutputs.js';
 import {UpdateNotice} from './updateNotice.js';
 import {loopIconName, nextLoopStatus, playPauseIconName, seekOffset,
@@ -477,10 +478,17 @@ export default class MediaControlsExtension extends Extension {
          * nothing is playing" state set during construction. */
         this._indicator.sync();
 
+        /* disable() hands GNOME its own media controls back. */
+        this._shellMedia = new ShellMediaControls(
+            Main.panel.statusArea.dateMenu?._messageList ?? null);
+        this._applyShellMedia();
+
         this._settings.connectObject(
             'changed::panel-position', () => this._reposition(),
             'changed::pause-others-on-play',
-            () => this._applyExclusivePlayback(), this);
+            () => this._applyExclusivePlayback(),
+            'changed::hide-shell-media-controls',
+            () => this._applyShellMedia(), this);
 
         this._updateNotice = new UpdateNotice(this, this._settings);
     }
@@ -495,6 +503,11 @@ export default class MediaControlsExtension extends Extension {
     _applyExclusivePlayback() {
         this._manager.exclusivePlayback =
             this._settings.get_boolean('pause-others-on-play');
+    }
+
+    _applyShellMedia() {
+        this._shellMedia.setHidden(
+            this._settings.get_boolean('hide-shell-media-controls'));
     }
 
     _panelBoxes() {
@@ -536,6 +549,9 @@ export default class MediaControlsExtension extends Extension {
         /* The extension has no `destroy` signal, so this owner disconnects
          * explicitly. */
         this._settings.disconnectObject(this);
+
+        this._shellMedia?.destroy();
+        this._shellMedia = null;
 
         this._updateNotice?.destroy();
         this._updateNotice = null;

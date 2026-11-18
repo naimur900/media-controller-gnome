@@ -119,6 +119,14 @@ export default class MediaControlsPreferences extends ExtensionPreferences {
             _('Remove the indicator from the panel while no media player is running.')));
         page.add(placement);
 
+        const shellControls = new Adw.PreferencesGroup({
+            title: _('Notification list'),
+        });
+        shellControls.add(this._switchRow(settings, 'hide-shell-media-controls',
+            _('Hide GNOME media controls'),
+            _('Remove the player GNOME shows in the notification list under the clock, which repeats this indicator and its card. It comes back when this is off or the extension is disabled.')));
+        page.add(shellControls);
+
         /* Listed in the order they appear on screen. */
         const buttons = new Adw.PreferencesGroup({
             title: _('Playback controls'),

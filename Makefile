@@ -10,7 +10,7 @@ SOURCES = $(SRC)/extension.js $(SRC)/prefs.js $(SRC)/mpris.js $(SRC)/mediaCard.j
           $(SRC)/transport.js $(SRC)/paths.js $(SRC)/equalizer.js \
           $(SRC)/compat.js $(SRC)/lyrics.js $(SRC)/lyricsPanel.js \
           $(SRC)/cardList.js $(SRC)/playerList.js $(SRC)/outputList.js \
-          $(SRC)/soundOutputs.js $(SRC)/playerVolume.js \
+          $(SRC)/soundOutputs.js $(SRC)/playerVolume.js $(SRC)/shellMediaControls.js \
           $(SRC)/updateNotice.js \
           $(SRC)/icons/lyrics-symbolic.svg \
           $(SRC)/metadata.json $(SRC)/stylesheet.css
@@ -89,6 +89,7 @@ pack: schemas
 		--extra-source=outputList.js \
 		--extra-source=soundOutputs.js \
 		--extra-source=playerVolume.js \
+		--extra-source=shellMediaControls.js \
 		--extra-source=updateNotice.js \
 		--extra-source=icons \
 		"--extra-source=$(CURDIR)/LICENSE" \

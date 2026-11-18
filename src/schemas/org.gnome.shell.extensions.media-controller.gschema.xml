@@ -119,6 +119,12 @@
       <summary>Hide the indicator when no player is running</summary>
     </key>
 
+    <key name="hide-shell-media-controls" type="b">
+      <default>true</default>
+      <summary>Hide GNOME's own media controls</summary>
+      <description>Removes the media player GNOME shows in the notification list under the clock, which repeats the panel indicator and the card. GNOME's controls come back when this is turned off or the extension is disabled.</description>
+    </key>
+
     <key name="scroll-to-change-volume" type="b">
       <default>true</default>
       <summary>Scroll over the indicator to change the player's volume</summary>
