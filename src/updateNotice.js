@@ -11,12 +11,13 @@ import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
 /* Bump together with releaseNotes() to announce a release; leave both alone
  * and the release stays quiet. */
-const RELEASE = '3.4';
+const RELEASE = '3.5';
 
 function releaseNotes() {
     return [
-        _('Sound output: a button at the bottom right of the card shows where the sound is going, and switches between speakers, headphones, HDMI and Bluetooth, for every app at once.'),
-        _('What was playing keeps playing through the switch. The button can be hidden under Card in the preferences.'),
+        _('Scroll over the song in the top bar to turn the music up or down. It works for browsers too.'),
+        _('GNOME’s own music player under the clock is now hidden, so the same song no longer shows up twice.'),
+        _('Both can be turned off in the preferences.'),
     ].map(line => `• ${line}`).join('\n');
 }
 

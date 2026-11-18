@@ -28,6 +28,14 @@ Rhythmbox, mpv, and so on.
 </p>
 <p align="center"><em>Synced lyrics, colors from the album art, and the player and sound output lists in the dark and light styles.</em></p>
 
+## What's new in 3.5
+
+- **Scroll for volume**: scroll over the song in the top bar to turn the music
+  up or down. It works for browsers too.
+- **No duplicate player**: GNOME's own music player under the clock is hidden,
+  so the same song no longer shows up twice.
+- Both can be turned off in the preferences.
+
 ## What's new in 3.4
 
 - **Sound output**: a button at the bottom right of the card shows the output in
