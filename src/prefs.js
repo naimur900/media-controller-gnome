@@ -148,15 +148,19 @@ export default class MediaControlsPreferences extends ExtensionPreferences {
         text.add(this._switchRow(settings, 'show-player-icon', _('Player icon')));
         text.add(this._switchRow(settings, 'show-title', _('Track title')));
         text.add(this._switchRow(settings, 'show-artist', _('Artist')));
+        text.add(this._spinRow(settings, 'panel-text-min-width',
+            _('Minimum text width'),
+            _('The track text takes the width it needs, in pixels, but never less than this. Set it to the maximum for an indicator that keeps its width whatever is playing.'),
+            0, 600, 10));
         text.add(this._spinRow(settings, 'panel-text-width',
-            _('Text width'),
-            _('Width reserved for the track text, in pixels. The indicator keeps this width whatever is playing.'),
+            _('Maximum text width'),
+            _('The track text is never wider than this, in pixels.'),
             60, 600, 10));
         page.add(text);
 
         const scrolling = new Adw.PreferencesGroup({
             title: _('Scrolling text'),
-            description: _('What happens when the track text is wider than the reserved width.'),
+            description: _('What happens when the track text is wider than the maximum width.'),
         });
         scrolling.add(this._switchRow(settings, 'scroll-text',
             _('Scroll the text'),

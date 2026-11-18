@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* scrollingLabel.js: the panel's fixed-width track label. Text that does not
- * fit is ellipsized, or scrolled once per track, carousel style: drawn twice,
- * so the tail of one copy is still on screen as the head of the next comes in. */
+/* scrollingLabel.js: the panel's track label. It is as wide as its text,
+ * between a minimum and a maximum width. Text wider than the maximum is
+ * ellipsized, or scrolled once per track, carousel style: drawn twice, so the
+ * tail of one copy is still on screen as the head of the next comes in. */
 
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
@@ -29,7 +30,10 @@ class ScrollingLabel extends St.Widget {
         });
 
         this._text = '';
+        /* The label's width now, between the two bounds. */
         this._width = 200;
+        this._minWidth = 200;
+        this._maxWidth = 200;
         this._scrolling = false;
         this._speed = 30;
         this._rightToLeft = false;
@@ -83,10 +87,14 @@ class ScrollingLabel extends St.Widget {
         this._update(true);
     }
 
-    setWidth(width) {
-        if (width === this._width)
+    /* The label takes its text's width, kept between min and max. With both the
+     * same, the width is fixed. */
+    setWidth(min, max) {
+        min = Math.min(min, max);
+        if (min === this._minWidth && max === this._maxWidth)
             return;
-        this._width = width;
+        this._minWidth = min;
+        this._maxWidth = max;
         this._update(true);
     }
 
@@ -108,9 +116,11 @@ class ScrollingLabel extends St.Widget {
     /* force restarts the pass even if the geometry is unchanged. */
     _update(force = false) {
         this._first.text = this._text;
-        this.set_width(this._width);
 
         const fullWidth = this._textWidth();
+        this._width = Math.min(Math.max(Math.ceil(fullWidth), this._minWidth), this._maxWidth);
+        this.set_width(this._width);
+
         if (!this._scrolling || fullWidth <= this._width) {
             this._distance = 0;
             this._showStatic();

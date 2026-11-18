@@ -51,6 +51,7 @@ const PANEL_KEYS = [
     'show-title',
     'show-artist',
     'panel-text-width',
+    'panel-text-min-width',
     'scroll-text',
     'scroll-speed',
     'scroll-direction',
@@ -194,6 +195,7 @@ class MediaIndicator extends PanelMenu.Button {
             showTitle: settings.get_boolean('show-title'),
             showArtist: settings.get_boolean('show-artist'),
             textWidth: settings.get_int('panel-text-width'),
+            textMinWidth: settings.get_int('panel-text-min-width'),
             scrollText: settings.get_boolean('scroll-text'),
             scrollSpeed: settings.get_int('scroll-speed'),
             scrollRightToLeft: settings.get_string('scroll-direction') === 'right-to-left',
@@ -375,7 +377,7 @@ class MediaIndicator extends PanelMenu.Button {
         this.container.visible = true;
 
         const text = this._panelText(player);
-        this._label.setWidth(prefs.textWidth);
+        this._label.setWidth(prefs.textMinWidth, prefs.textWidth);
         this._label.setScrolling(prefs.scrollText, prefs.scrollSpeed,
             prefs.scrollRightToLeft);
         this._label.setText(text);
