@@ -80,6 +80,11 @@ Rhythmbox, mpv, and so on.
   volume bar in your accent color, with the sound output at the end.
 - **Volume bar** that sets the player's own volume, by dragging, scrolling,
   clicking or with the arrow keys. It follows changes made in the player itself.
+- **Scroll for volume**, on by default: scrolling over the panel indicator turns
+  the player up or down, and the shell's volume popup shows the new level under
+  the player's name. It sets the player's own volume where it has one, and for
+  browsers, the volume of their sound stream — the per-app volume in the sound
+  settings — so it works for them too.
 - **Sound output** at the bottom right of the card: an icon for the output in
   use — speakers, headphones, HDMI or Bluetooth — that opens a list of every
   available output to switch to, named plainly: "Built-in" rather than the
@@ -124,7 +129,8 @@ Rhythmbox, mpv, and so on.
 Skip buttons only appear for players that support seeking; shuffle and loop
 only for players that expose them over MPRIS. The volume bar sets the player's
 own volume rather than the system's, so it appears only for players that let it
-be set over MPRIS — not for browsers.
+be set over MPRIS — not for browsers. Scrolling over the indicator reaches
+browsers through their sound stream instead, while one is open.
 
 ## Requirements
 
@@ -183,6 +189,7 @@ in on Wayland, because the shell caches ES modules for the life of the process.
 | `scroll-speed`                                    | 30              | Scrolling speed, in pixels per second                   |
 | `controls-on-left`                                | off             | Put the buttons before the text                         |
 | `hide-when-inactive`                              | on              | Hide the indicator when no player is running            |
+| `scroll-to-change-volume`                         | on              | Scroll over the indicator to turn the player up or down |
 | `card-show-art`                                   | on              | Album art in the card                                   |
 | `card-art-size`                                   | `large`         | `small`, `medium` or `large`: 80, 104 or 136 pixels     |
 | `card-art-backdrop`                               | on              | Frosted backdrop blurred from the album art, behind the card |
@@ -210,6 +217,7 @@ in on Wayland, because the shell caches ES modules for the life of the process.
 | [src/playerList.js](src/playerList.js)         | The card's list of players to switch to     |
 | [src/outputList.js](src/outputList.js)         | The card's list of sound outputs            |
 | [src/soundOutputs.js](src/soundOutputs.js)     | The system's sound outputs, and switching them |
+| [src/playerVolume.js](src/playerVolume.js)     | Scrolling over the indicator: the player's volume, or its sound stream's |
 | [src/lyrics.js](src/lyrics.js)                 | Finds lyrics and parses LRC                 |
 | [src/scrollingLabel.js](src/scrollingLabel.js) | The fixed-width panel label and its marquee |
 | [src/mpris.js](src/mpris.js)                   | MPRIS2 D-Bus client and player tracking     |
@@ -220,7 +228,7 @@ in on Wayland, because the shell caches ES modules for the life of the process.
 | [src/compat.js](src/compat.js)                 | Differences between GNOME Shell versions    |
 | [src/updateNotice.js](src/updateNotice.js)     | What's-new notification after an update     |
 
-`mpris.js`, `artCache.js`, `backdrop.js`, `lyrics.js` and `soundOutputs.js` deliberately
+`mpris.js`, `artCache.js`, `backdrop.js`, `lyrics.js`, `soundOutputs.js` and `playerVolume.js` deliberately
 import only `gi://` modules, never `resource:///org/gnome/shell/…`, so they can be
 exercised outside the shell.
 

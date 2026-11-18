@@ -141,6 +141,14 @@ export default class MediaControlsPreferences extends ExtensionPreferences {
             _('Cycles between off, the whole queue, and one track. Requires a player that supports looping.')));
         page.add(buttons);
 
+        const volume = new Adw.PreferencesGroup({
+            title: _('Volume'),
+        });
+        volume.add(this._switchRow(settings, 'scroll-to-change-volume',
+            _('Scroll to change volume'),
+            _('Scroll over the indicator to turn the player up or down. Sets the volume of the player itself, not of the whole system.')));
+        page.add(volume);
+
         const text = new Adw.PreferencesGroup({
             title: _('Track information'),
             description: _('What the indicator shows about the current track.'),

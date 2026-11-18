@@ -119,6 +119,12 @@
       <summary>Hide the indicator when no player is running</summary>
     </key>
 
+    <key name="scroll-to-change-volume" type="b">
+      <default>true</default>
+      <summary>Scroll over the indicator to change the player's volume</summary>
+      <description>Changes the volume of the player on screen, not of the whole system: its own volume where it has one, and for browsers, which have none, the volume of their sound stream.</description>
+    </key>
+
     <key name="card-show-art" type="b">
       <default>true</default>
       <summary>Show album art in the card</summary>

@@ -3,6 +3,7 @@
  * menu, which holds the now-playing card. */
 
 import Clutter from 'gi://Clutter';
+import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
@@ -12,15 +13,16 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {ArtCache} from './artCache.js';
-import {boxOrientation} from './compat.js';
+import {boxOrientation, showOsd} from './compat.js';
 import {LyricsSource} from './lyrics.js';
 import {MediaCard} from './mediaCard.js';
 import {MprisManager} from './mpris.js';
+import {PlayerVolume, scrollSteps} from './playerVolume.js';
 import {ScrollingLabel} from './scrollingLabel.js';
 import {SoundOutputs} from './soundOutputs.js';
 import {UpdateNotice} from './updateNotice.js';
 import {loopIconName, nextLoopStatus, playPauseIconName, seekOffset,
-    setReactive, setToggleStyle} from './transport.js';
+    setReactive, setToggleStyle, volumeIconName} from './transport.js';
 
 const ROLE = 'media-controls';
 
@@ -56,6 +58,7 @@ const PANEL_KEYS = [
     'scroll-direction',
     'hide-when-inactive',
     'controls-on-left',
+    'scroll-to-change-volume',
 ];
 
 const MediaIndicator = GObject.registerClass(
@@ -65,6 +68,7 @@ class MediaIndicator extends PanelMenu.Button {
 
         this._settings = settings;
         this._manager = manager;
+        this._volume = new PlayerVolume(soundOutputs.mixer);
         this._orderApplied = null;
         /* Whether the card wears its album-art backdrop. */
         this._glass = false;
@@ -199,6 +203,7 @@ class MediaIndicator extends PanelMenu.Button {
             scrollRightToLeft: settings.get_string('scroll-direction') === 'right-to-left',
             hideWhenInactive: settings.get_boolean('hide-when-inactive'),
             controlsOnLeft: settings.get_boolean('controls-on-left'),
+            scrollVolume: settings.get_boolean('scroll-to-change-volume'),
         };
     }
 
@@ -229,6 +234,25 @@ class MediaIndicator extends PanelMenu.Button {
             this.menu.toggle();
 
         return Clutter.EVENT_PROPAGATE;
+    }
+
+    /* Scrolling anywhere over the indicator turns the player on screen up or
+     * down. The shell's volume popup confirms it, labeled with the player so it
+     * does not read as the system's volume. */
+    vfunc_scroll_event(event) {
+        const player = this._manager.activePlayer;
+        const steps = this._prefs.scrollVolume && player ? scrollSteps(event) : 0;
+        if (!steps)
+            return Clutter.EVENT_PROPAGATE;
+
+        const volume = this._volume.step(player, steps);
+        if (!volume)
+            return Clutter.EVENT_PROPAGATE;
+
+        showOsd(Main.osdWindowManager,
+            Gio.ThemedIcon.new(volumeIconName(volume.level)),
+            player.displayName, volume.level, volume.maxLevel);
+        return Clutter.EVENT_STOP;
     }
 
     /* By geometry: get_source() is null for pointer events here, and picking

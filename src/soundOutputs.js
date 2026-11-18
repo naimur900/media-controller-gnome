@@ -53,6 +53,12 @@ export const SoundOutputs = GObject.registerClass({
         return this._activeId;
     }
 
+    /* The open mixer connection, shared with the panel's scroll volume, which
+     * changes the streams of players that have no volume of their own. */
+    get mixer() {
+        return this._control;
+    }
+
     /* The mixer can name the default before announcing it, so this may be
      * null for a moment. */
     get active() {

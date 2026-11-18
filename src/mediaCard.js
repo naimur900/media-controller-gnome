@@ -20,7 +20,7 @@ import { OutputList } from './outputList.js';
 import { PlayerList } from './playerList.js';
 import {
     US_PER_SECOND, loopIconName, nextLoopStatus, playPauseIconName,
-    seekOffset, setReactive, setToggleStyle, syncHover
+    seekOffset, setReactive, setToggleStyle, syncHover, volumeIconName
 } from './transport.js';
 
 const POSITION_POLL_SECONDS = 1;
@@ -53,21 +53,6 @@ const DEFAULT_ART_SIZE = 'large';
  * write echoes back as PropertiesChanged, which would pull the thumb back
  * mid-drag. */
 const VOLUME_HOLD_MS = 400;
-
-/* The shell's own volume thresholds: muted only at zero, then thirds. */
-const VOLUME_ICONS = [
-    'audio-volume-muted-symbolic',
-    'audio-volume-low-symbolic',
-    'audio-volume-medium-symbolic',
-    'audio-volume-high-symbolic',
-];
-
-/* volume is 0 to 1, or past it on players that amplify. */
-function volumeIconName(volume) {
-    if (volume <= 0)
-        return VOLUME_ICONS[0];
-    return VOLUME_ICONS[Math.min(3, Math.ceil(volume * 3))];
-}
 
 /* Spreading iterates code points, so the cut never splits a surrogate pair
  * (an emoji) in half. */

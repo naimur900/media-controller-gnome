@@ -13,3 +13,13 @@ export function boxOrientation(orientation) {
         return {orientation};
     return {vertical: orientation === Clutter.Orientation.VERTICAL};
 }
+
+/* GNOME 49 replaced the OSD manager's show(monitorIndex, ...), where -1 meant
+ * every monitor, with showAll() and showOne(). The manager is passed in so this
+ * module keeps to gi:// imports. */
+export function showOsd(osdWindowManager, icon, label, level, maxLevel) {
+    if (osdWindowManager.showAll)
+        osdWindowManager.showAll(icon, label, level, maxLevel);
+    else
+        osdWindowManager.show(-1, icon, label, level, maxLevel);
+}
