@@ -28,6 +28,17 @@ Rhythmbox, mpv, and so on.
 </p>
 <p align="center"><em>Synced lyrics, colors from the album art, and the player and sound output lists in the dark and light styles.</em></p>
 
+## What's new in 3.6
+
+- **Volume bar for browsers**: the volume bar on the card now works for
+  Chrome, Firefox and other browsers too, not only for players like Spotify.
+  It turns the browser's sound up or down, and dims while the browser isn't
+  playing.
+- **Works with Openbar**: the card stays readable when the Openbar extension
+  gives menus a light look. Before, its text and buttons could disappear
+  into a white menu.
+- The volume bar can be hidden under Card in the preferences.
+
 ## What's new in 3.5
 
 - **Scroll for volume**: scroll over the song in the top bar to turn the music
@@ -88,6 +99,11 @@ Rhythmbox, mpv, and so on.
   volume bar in your accent color, with the sound output at the end.
 - **Volume bar** that sets the player's own volume, by dragging, scrolling,
   clicking or with the arrow keys. It follows changes made in the player itself.
+  For browsers, which have no volume of their own, it sets the volume of their
+  sound stream, as scrolling over the indicator does, and follows changes made
+  in the sound settings. A browser only has a sound stream while it plays and
+  for a little while after, so in between its bar stays in place but dimmed,
+  at the level it last had.
 - **Scroll for volume**, on by default: scrolling over the panel indicator turns
   the player up or down, and the shell's volume popup shows the new level under
   the player's name. It sets the player's own volume where it has one, and for
@@ -140,9 +156,11 @@ Rhythmbox, mpv, and so on.
 
 Skip buttons only appear for players that support seeking; shuffle and loop
 only for players that expose them over MPRIS. The volume bar sets the player's
-own volume rather than the system's, so it appears only for players that let it
-be set over MPRIS — not for browsers. Scrolling over the indicator reaches
-browsers through their sound stream instead, while one is open.
+own volume rather than the system's, so it appears for players that let it be
+set over MPRIS, and for browsers, through their sound stream. Other players
+without a volume of their own get no bar. For a browser, the bar and scrolling
+set the browser's sound as a whole, every tab at once, and only while it has a
+sound stream open.
 
 ## Requirements
 
@@ -211,7 +229,7 @@ in on Wayland, because the shell caches ES modules for the life of the process.
 | `card-show-seek-bar`                              | on              | Seek bar in the card                                    |
 | `card-show-seek-buttons`                          | on              | Skip buttons in the card                                |
 | `card-show-shuffle` / `card-show-loop`            | on              | Shuffle and loop buttons on the card's edges            |
-| `card-show-volume`                                | on              | Volume bar under the card's controls, for the player's own volume |
+| `card-show-volume`                                | on              | Volume bar under the card's controls, for the player's own volume or a browser's sound stream |
 | `card-show-output-switcher`                       | on              | Sound output button at the card's bottom right, switching the system's output |
 | `card-show-lyrics-button`                         | on              | Lyrics button in the card, for music players            |
 | `lyrics-online-lookup`                            | off             | Ask LRCLIB when the player and `.lrc` files have none   |

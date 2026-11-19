@@ -17,7 +17,9 @@ import { boxOrientation } from './compat.js';
 import { Equalizer } from './equalizer.js';
 import { LyricsPanel, lyricsIcon } from './lyricsPanel.js';
 import { OutputList } from './outputList.js';
+import { PlayerKind } from './playerIcons.js';
 import { PlayerList } from './playerList.js';
+import { StreamVolume } from './playerVolume.js';
 import {
     US_PER_SECOND, loopIconName, nextLoopStatus, playPauseIconName,
     seekOffset, setReactive, setToggleStyle, syncHover, volumeIconName
@@ -53,6 +55,10 @@ const DEFAULT_ART_SIZE = 'large';
  * write echoes back as PropertiesChanged, which would pull the thumb back
  * mid-drag. */
 const VOLUME_HOLD_MS = 400;
+
+/* A browser's volume bar while the browser has no sound stream open: still in
+ * place, so the footer does not jump, but plainly out of use. */
+const VOLUME_IDLE_OPACITY = 110;
 
 /* Spreading iterates code points, so the cut never splits a surrogate pair
  * (an emoji) in half. */
@@ -180,6 +186,8 @@ export const MediaCard = GObject.registerClass({
 
         this._artCache = artCache;
         this._soundOutputs = soundOutputs;
+        this._streamVolume = new StreamVolume(soundOutputs.mixer,
+            () => this._syncVolume());
         this._settings = settings;
         /* Stage pixels; known once the card is first opened. */
         this._maxHeight = Infinity;
@@ -844,8 +852,9 @@ export const MediaCard = GObject.registerClass({
         });
     }
 
-    /* The player's own volume, not the system's. Volume is announced in
-     * PropertiesChanged, so unlike the seek bar it needs no polling. */
+    /* The player's own volume, not the system's: over MPRIS where the player
+     * takes it, and for a browser, which does not, its sound streams' volume.
+     * Both announce changes, so unlike the seek bar it needs no polling. */
     _buildVolume() {
         this._volumeBox = new St.BoxLayout({
             style_class: 'mc-volume-box',
@@ -869,9 +878,15 @@ export const MediaCard = GObject.registerClass({
          * straight back. */
         this._volumeChangedId = this._volumeSlider.connect('notify::value', () => {
             const volume = this._volumeSlider.value;
-            this._player?.setVolume(volume);
-            this._volumeIcon.icon_name = volumeIconName(volume);
+            /* Held before writing: a stream announces its new volume during
+             * the write, and moving the slider from inside this handler would
+             * have GLib replay the change once the block is lifted. */
             this._holdVolume();
+            if (this._player?.canSetVolume)
+                this._player.setVolume(volume);
+            else
+                this._streamVolume.setLevel(volume);
+            this._volumeIcon.icon_name = volumeIconName(volume);
         });
 
         this._volumeBox.add_child(this._volumeIcon);
@@ -891,14 +906,30 @@ export const MediaCard = GObject.registerClass({
             });
     }
 
+    /* A browser with no stream open shows the level its app last had, dimmed.
+     * Never having seen one, it shows full: the level the sound server gives
+     * an app it has no volume for. */
     _syncVolume() {
-        const volume = this._player?.volume ?? null;
-        if (this._volumeHoldId || volume === null)
+        const player = this._player;
+        if (!player)
+            return;
+
+        const live = player.canSetVolume ? player.volume : this._streamVolume.level;
+        this._setVolumeLive(live !== null);
+
+        const volume = live ?? this._streamVolume.lastLevel ?? 1;
+        if (this._volumeHoldId)
             return;
         this._volumeSlider.block_signal_handler(this._volumeChangedId);
         this._volumeSlider.value = volume;
         this._volumeSlider.unblock_signal_handler(this._volumeChangedId);
         this._volumeIcon.icon_name = volumeIconName(volume);
+    }
+
+    _setVolumeLive(live) {
+        this._volumeSlider.can_focus = live;
+        setReactive(this._volumeSlider, live);
+        this._volumeBox.opacity = live ? 255 : VOLUME_IDLE_OPACITY;
     }
 
     _toggleShuffle() {
@@ -1151,6 +1182,7 @@ export const MediaCard = GObject.registerClass({
             this._shuffleButton.visible = false;
             this._loopButton.visible = false;
             this._volumeBox.visible = false;
+            this._streamVolume.setPlayer(null);
             this._updateFooter();
             this._equalizer.visible = false;
             this._equalizer.setPlaying(false);
@@ -1206,8 +1238,11 @@ export const MediaCard = GObject.registerClass({
         setToggleStyle(this._loopButton,
             player.canLoop && player.loopStatus !== 'None');
 
-        this._volumeBox.visible =
-            this._settings.get_boolean('card-show-volume') && player.canSetVolume;
+        /* Browsers take no volume over MPRIS; their sound streams stand in. */
+        const streams = !player.canSetVolume && player.kind === PlayerKind.BROWSER;
+        this._volumeBox.visible = this._settings.get_boolean('card-show-volume') &&
+            (player.canSetVolume || streams);
+        this._streamVolume.setPlayer(streams && this._volumeBox.visible ? player : null);
         this._syncVolume();
         this._updateFooter();
 
@@ -1264,6 +1299,7 @@ export const MediaCard = GObject.registerClass({
             this._volumeHoldId = 0;
         }
         this._disconnectPlayer();
+        this._streamVolume.destroy();
         for (const id of this._settingsSignals)
             this._settings.disconnect(id);
         this._settingsSignals = [];

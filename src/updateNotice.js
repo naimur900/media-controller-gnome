@@ -11,13 +11,13 @@ import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
 /* Bump together with releaseNotes() to announce a release; leave both alone
  * and the release stays quiet. */
-const RELEASE = '3.5';
+const RELEASE = '3.6';
 
 function releaseNotes() {
     return [
-        _('Scroll over the song in the top bar to turn the music up or down. It works for browsers too.'),
-        _('GNOME’s own music player under the clock is now hidden, so the same song no longer shows up twice.'),
-        _('Both can be turned off in the preferences.'),
+        _('The volume bar on the card now works for browsers like Chrome and Firefox too. It dims while the browser isn’t playing.'),
+        _('The card stays easy to read with the Openbar extension’s light menus.'),
+        _('The volume bar can be hidden under Card in the preferences.'),
     ].map(line => `• ${line}`).join('\n');
 }
 

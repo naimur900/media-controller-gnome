@@ -50,9 +50,15 @@
 }
 
 /* ---------- Card container ---------- */
+
+/* The background is !important because extensions that restyle every panel
+ * menu, such as Openbar, outrank one class: their light menu would sit behind
+ * the card's white text and icons, hiding them. Openbar's gradient option is
+ * a background image, so that is cleared too. */
 .mc-card-menu {
   padding: 0;
-  background-color: #222226;
+  background-color: #222226 !important;
+  background-image: none !important;
   border-color: #424247;
 }
 
@@ -553,7 +559,7 @@
  * to the same alpha. */
 
 .mc-card-menu.mc-light {
-  background-color: #ffffff;
+  background-color: #ffffff !important;
   border-color: #e6e6eb;
 }
 

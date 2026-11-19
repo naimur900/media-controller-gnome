@@ -186,7 +186,7 @@
     <key name="card-show-volume" type="b">
       <default>true</default>
       <summary>Show the volume bar in the card</summary>
-      <description>A slider under the playback controls that sets the player's own volume. Only shown for players that let their volume be set over MPRIS, which browsers do not.</description>
+      <description>A slider under the playback controls that sets the volume of the player on screen, not of the whole system: its own volume where it has one, and for browsers, which have none, the volume of their sound stream. A browser's bar is dimmed while it has no sound open.</description>
     </key>
 
     <key name="card-show-output-switcher" type="b">
